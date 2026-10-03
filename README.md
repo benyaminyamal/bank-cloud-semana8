@@ -16,7 +16,7 @@ La solución separa el acceso, la seguridad y el negocio:
 - **accounts-service** carga `intereses.csv` y `cuentas_anuales.csv`. Cada fila queda marcada como válida o con sus observaciones (saldo vacío, edad fuera de rango, tipo inválido, duplicados).
 - **transactions-service** carga `transacciones.csv`, publica eventos en Kafka y consulta el resumen de cuentas. Si cuentas no responde, Resilience4j devuelve el informe solo con las transacciones.
 - **notification-service** consume el topic `bank.transacciones` y conserva los últimos eventos.
-- **Kafka** transporta dos tipos de evento: la importación del CSV y cada transacción nueva.
+- **Kafka** corre con 3 brokers. El topic `bank.transacciones` tiene 3 particiones y replicación 3, así cada mensaje queda copiado en los tres brokers. Transporta la importación del CSV y cada transacción nueva.
 
 Los CSV de `data/semana_1`, `data/semana_2` y `data/semana_3` se copian dentro de las imágenes. El perfil por defecto es `semana_3`.
 
@@ -36,8 +36,7 @@ bank-cloud-semana8/
 ├── accounts-service/            # cuentas, puerto 8081
 ├── transactions-service/        # transacciones, Resilience4j y productor Kafka, puerto 8082
 ├── notification-service/        # consumidor Kafka, puerto 8083
-├── gateway-service/             # entrada y circuit breaker, puerto 8080
-└── scripts/demo.sh              # pide un token y recorre las rutas
+└── gateway-service/             # entrada y circuit breaker, puerto 8080
 ```
 
 Stack: Java 21, Spring Boot 3.5, Spring Cloud 2025.0, Resilience4j, Kafka y Docker.
@@ -48,13 +47,6 @@ Requisitos: JDK 21 o superior, Maven 3.9 y Docker.
 
 ```bash
 docker compose up --build
-```
-
-En otra terminal:
-
-```bash
-chmod +x scripts/demo.sh
-./scripts/demo.sh
 ```
 
 Para compilar y probar sin contenedores:
