@@ -36,7 +36,8 @@ bank-cloud-semana8/
 ├── accounts-service/            # cuentas, puerto 8081
 ├── transactions-service/        # transacciones, Resilience4j y productor Kafka, puerto 8082
 ├── notification-service/        # consumidor Kafka, puerto 8083
-└── gateway-service/             # entrada y circuit breaker, puerto 8080
+├── gateway-service/             # entrada y circuit breaker, puerto 8080
+└── CAPTURAS/                    # evidencia de ejecución
 ```
 
 Stack: Java 21, Spring Boot 3.5, Spring Cloud 2025.0, Resilience4j, Kafka y Docker.
@@ -48,6 +49,10 @@ Requisitos: JDK 21 o superior, Maven 3.9 y Docker.
 ```bash
 docker compose up --build
 ```
+
+Las imágenes generadas para cada microservicio quedan en Docker:
+
+![Imágenes Docker de los microservicios](CAPTURAS/MICROSERVICIOS_DOCKER.png)
 
 Para compilar y probar sin contenedores:
 
@@ -63,6 +68,8 @@ curl -u bank-client:bank-secret \
   -d scope="accounts.read transactions.read transactions.write events.read" \
   http://localhost:9000/oauth2/token
 ```
+
+![Token de acceso OAuth 2.0](CAPTURAS/TOKEN%20DE%20ACCESO.png)
 
 ### Rutas
 
@@ -96,7 +103,11 @@ docker compose stop accounts-service
 
 ## Evidencia de ejecución
 
-`docker compose ps` dejó los siete componentes en estado healthy: `discovery-service`, `auth-service`, `accounts-service`, `transactions-service`, `notification-service`, `gateway-service` y `kafka`.
+### Cada microservicio en ejecución
+
+Eureka muestra los cinco microservicios registrados y en estado UP: cuentas, autorización, gateway, notificaciones y transacciones.
+
+![Microservicios registrados en Eureka](CAPTURAS/EUREKA.png)
 
 Arranque de cada microservicio:
 
@@ -151,6 +162,10 @@ Alta publicada en Kafka (`POST /api/transacciones`, HTTP 201):
 ```json
 {"transaccion":{"id":1001,"fechaOriginal":"2024-12-02","fecha":"2024-12-02","monto":2200,"tipo":"debito","valida":true,"observaciones":[]},"eventoPublicado":true}
 ```
+
+El topic `bank.transacciones` quedó con 3 particiones y replicación 3. Cada partición tiene réplica en los brokers 1, 2 y 3.
+
+![Topic bank.transacciones en Kafka](CAPTURAS/KAFKA.png)
 
 Eventos consumidos (`GET /api/eventos`):
 
