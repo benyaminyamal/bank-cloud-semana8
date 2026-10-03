@@ -1,0 +1,91 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      routes:
+        - id: cuentas
+          uri: lb://accounts-service
+          predicates:
+            - Path=/api/cuentas/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: cuentas
+                fallbackUri: forward:/fallback/cuentas
+        - id: transacciones
+          uri: lb://transactions-service
+          predicates:
+            - Path=/api/transacciones/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: transacciones
+                fallbackUri: forward:/fallback/transacciones
+        - id: eventos
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/eventos/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: eventos
+                fallbackUri: forward:/fallback/eventos
+
+app:
+  jwt:
+    issuer: ${APP_JWT_ISSUER:http://localhost:9000}
+    jwk-set-uri: ${APP_JWT_JWK_SET_URI:http://localhost:9000/oauth2/jwks}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      cuentas:
+        sliding-window-size: 6
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      transacciones:
+        sliding-window-size: 6
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      eventos:
+        sliding-window-size: 6
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+  timelimiter:
+    instances:
+      cuentas:
+        timeout-duration: 5s
+      transacciones:
+        timeout-duration: 5s
+      eventos:
+        timeout-duration: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    eureka:
+      enabled: false

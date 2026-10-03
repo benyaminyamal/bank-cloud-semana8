@@ -1,0 +1,14 @@
+app:
+  jwt:
+    issuer: http://localhost:9000
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+spring:
+  cloud:
+    discovery:
+      enabled: false

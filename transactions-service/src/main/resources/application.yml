@@ -1,0 +1,75 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: transactions-service
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+      client:
+        config:
+          accounts-service:
+            connect-timeout: 2000
+            read-timeout: 3000
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        max.block.ms: 4000
+        request.timeout.ms: 3000
+        delivery.timeout.ms: 8000
+        spring.json.add.type.headers: true
+
+app:
+  data:
+    semana: ${APP_DATA_SEMANA:semana_3}
+  jwt:
+    issuer: ${APP_JWT_ISSUER:http://localhost:9000}
+    jwk-set-uri: ${APP_JWT_JWK_SET_URI:http://localhost:9000/oauth2/jwks}
+  auth:
+    token-uri: ${APP_AUTH_TOKEN_URI:http://localhost:9000/oauth2/token}
+    client-id: transactions-internal
+    client-secret: internal-secret
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      accounts-service:
+        sliding-window-size: 6
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 2
+  timelimiter:
+    instances:
+      accounts-service:
+        timeout-duration: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    eureka:
+      enabled: false
+    kafka:
+      enabled: false
