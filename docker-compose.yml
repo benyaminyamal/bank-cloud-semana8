@@ -2,6 +2,7 @@ x-java: &java
   EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
   APP_JWT_ISSUER: http://localhost:9000
   APP_JWT_JWK_SET_URI: http://auth-service:9000/oauth2/jwks
+  SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
 
 x-health: &health
   interval: 10s
@@ -172,6 +173,150 @@ services:
     healthcheck:
       <<: *health
       test: ["CMD", "curl", "-fsS", "http://localhost:8083/actuator/health"]
+
+  config-server:
+    build:
+      context: .
+      target: config
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    ports:
+      - "8888:8888"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *health
+      test: ["CMD", "curl", "-fsS", "http://localhost:8888/actuator/health"]
+
+  customers-service:
+    build:
+      context: .
+      target: customers
+    environment:
+      <<: *java
+    ports:
+      - "8084:8084"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      <<: *health
+      test: ["CMD", "curl", "-fsS", "http://localhost:8084/actuator/health"]
+
+  payments-service:
+    build:
+      context: .
+      target: payments
+    environment:
+      <<: *java
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka-1:9092,kafka-2:9092,kafka-3:9092
+      SPRING_KAFKA_PRODUCER_ACKS: all
+    ports:
+      - "8085:8085"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+      kafka-3:
+        condition: service_healthy
+    healthcheck:
+      <<: *health
+      test: ["CMD", "curl", "-fsS", "http://localhost:8085/actuator/health"]
+
+  batch-service:
+    build:
+      context: .
+      target: batch
+    environment:
+      <<: *java
+    ports:
+      - "8086:8086"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      <<: *health
+      test: ["CMD", "curl", "-fsS", "http://localhost:8086/actuator/health"]
+
+  bff-web:
+    build:
+      context: .
+      target: bff-web
+    environment:
+      <<: *java
+      APP_AUTH_TOKEN_URI: http://auth-service:9000/oauth2/token
+    ports:
+      - "8091:8091"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      accounts-service:
+        condition: service_healthy
+      customers-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *health
+      test: ["CMD", "curl", "-kfsS", "https://localhost:8091/actuator/health"]
+
+  bff-mobile:
+    build:
+      context: .
+      target: bff-mobile
+    environment:
+      <<: *java
+      APP_AUTH_TOKEN_URI: http://auth-service:9000/oauth2/token
+    ports:
+      - "8092:8092"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      accounts-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *health
+      test: ["CMD", "curl", "-kfsS", "https://localhost:8092/actuator/health"]
+
+  bff-atm:
+    build:
+      context: .
+      target: bff-atm
+    environment:
+      <<: *java
+      APP_AUTH_TOKEN_URI: http://auth-service:9000/oauth2/token
+    ports:
+      - "8093:8093"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      accounts-service:
+        condition: service_healthy
+      payments-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *health
+      test: ["CMD", "curl", "-kfsS", "https://localhost:8093/actuator/health"]
 
   gateway-service:
     build:

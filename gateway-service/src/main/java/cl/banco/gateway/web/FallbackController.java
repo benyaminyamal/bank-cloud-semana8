@@ -23,6 +23,21 @@ public class FallbackController {
         return respuesta("eventos");
     }
 
+    @RequestMapping("/fallback/clientes")
+    public Map<String, String> clientes() {
+        return respuesta("clientes");
+    }
+
+    @RequestMapping("/fallback/pagos")
+    public Map<String, String> pagos() {
+        return respuesta("pagos");
+    }
+
+    @RequestMapping("/fallback/batch")
+    public Map<String, String> batch() {
+        return respuesta("batch");
+    }
+
     private static Map<String, String> respuesta(String servicio) {
         return Map.of(
                 "mensaje", "El servicio de " + servicio + " no está disponible.",

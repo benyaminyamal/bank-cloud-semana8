@@ -19,7 +19,7 @@ public class EventoInbox {
 
     private final Deque<TransaccionEvento> eventos = new ArrayDeque<>();
 
-    @KafkaListener(topics = Topics.TRANSACCIONES, groupId = "notification-service")
+    @KafkaListener(topics = {Topics.TRANSACCIONES, Topics.PAGOS, Topics.ALERTAS}, groupId = "notification-service")
     public void recibir(TransaccionEvento evento) {
         if (evento == null || evento.getEventoId() == null) {
             return;

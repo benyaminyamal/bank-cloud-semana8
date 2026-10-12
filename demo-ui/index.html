@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Banco XYZ</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1c2430;
+      --muted: #5c6b7a;
+      --line: #d7dee6;
+      --paper: #f4f7f8;
+      --card: #ffffff;
+      --green: #0f6b4c;
+      --green-soft: #e7f5ef;
+      --amber: #8a5a00;
+      --amber-soft: #fff4dc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    header {
+      background: #12324d;
+      color: white;
+      padding: 28px 32px 22px;
+    }
+    header p { margin: 6px 0 0; color: #c5d4e2; }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+    .row { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+    h2 { margin: 0 0 12px; font-size: 18px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    input, select, button {
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+    }
+    button {
+      background: #12324d;
+      color: white;
+      border: 0;
+      cursor: pointer;
+    }
+    button.secondary { background: white; color: var(--ink); border: 1px solid var(--line); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat {
+      background: var(--paper);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .stat b { display: block; font-size: 22px; margin-top: 4px; }
+    .ok { background: var(--green-soft); color: var(--green); }
+    .warn { background: var(--amber-soft); color: var(--amber); }
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    pre {
+      background: #10202e;
+      color: #e7eef5;
+      border-radius: 8px;
+      padding: 12px;
+      overflow: auto;
+      font-size: 12px;
+      max-height: 220px;
+    }
+    ul { margin: 0; padding-left: 18px; }
+    li { margin: 8px 0; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
+    @media (max-width: 800px) {
+      .row, .fields, .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Banco XYZ</h1>
+    <p>OAuth 2.0, cuentas legacy, informe con Resilience4j y eventos de Kafka.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Acceso</h2>
+      <span id="estado" class="pill warn">Sin token</span>
+      <div class="actions">
+        <button id="entrar" type="button">Obtener token</button>
+        <button id="cargar" class="secondary" type="button">Actualizar datos</button>
+      </div>
+    </section>
+
+    <div class="row">
+      <section>
+        <h2>Cuentas</h2>
+        <div class="stats">
+          <div class="stat">Registros<b id="cuentas-total">—</b></div>
+          <div class="stat">Válidas<b id="cuentas-validas">—</b></div>
+          <div class="stat">Saldo<b id="cuentas-saldo">—</b></div>
+        </div>
+      </section>
+      <section>
+        <h2>Informe</h2>
+        <span id="informe-estado" class="pill warn">Pendiente</span>
+        <p id="informe-texto">Todavía no se consulta el cruce entre transacciones y cuentas.</p>
+        <div class="stats">
+          <div class="stat">Transacciones<b id="tx-total">—</b></div>
+          <div class="stat">Válidas<b id="tx-validas">—</b></div>
+          <div class="stat">Monto<b id="tx-monto">—</b></div>
+        </div>
+      </section>
+    </div>
+
+    <section>
+      <h2>Nueva transacción</h2>
+      <div class="fields">
+        <div>
+          <label for="fecha">Fecha</label>
+          <input id="fecha" value="2024-12-02">
+        </div>
+        <div>
+          <label for="monto">Monto</label>
+          <input id="monto" value="2200">
+        </div>
+        <div>
+          <label for="tipo">Tipo</label>
+          <select id="tipo">
+            <option value="debito">debito</option>
+            <option value="credito">credito</option>
+          </select>
+        </div>
+        <button id="crear" type="button">Publicar</button>
+      </div>
+      <p id="alta"></p>
+    </section>
+
+    <section>
+      <h2>Eventos de Kafka</h2>
+      <ul id="eventos"></ul>
+    </section>
+
+    <section>
+      <h2>Respuesta del gateway</h2>
+      <pre id="raw">Aquí aparece el JSON de la última consulta.</pre>
+    </section>
+  </main>
+  <script>
+    let token = "";
+
+    const estado = document.querySelector("#estado");
+    const raw = document.querySelector("#raw");
+
+    function mostrar(data) {
+      raw.textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function llamar(path, options = {}) {
+      const headers = new Headers(options.headers || {});
+      if (token) headers.set("Authorization", "Bearer " + token);
+      const response = await fetch(path, { ...options, headers });
+      const data = await response.json();
+      mostrar(data);
+      if (!response.ok) throw new Error(data.error || data.mensaje || response.statusText);
+      return data;
+    }
+
+    function dinero(valor) {
+      return new Intl.NumberFormat("es-CL").format(valor ?? 0);
+    }
+
+    async function cargar() {
+      const cuentas = await llamar("/api/cuentas/resumen");
+      document.querySelector("#cuentas-total").textContent = cuentas.totalRegistros;
+      document.querySelector("#cuentas-validas").textContent = cuentas.cuentasValidas;
+      document.querySelector("#cuentas-saldo").textContent = dinero(cuentas.saldoTotal);
+
+      const informe = await llamar("/api/transacciones/informe");
+      const pill = document.querySelector("#informe-estado");
+      pill.textContent = informe.cuentasDisponibles ? "Informe completo" : "Fallback de Resilience4j";
+      pill.className = "pill " + (informe.cuentasDisponibles ? "ok" : "warn");
+      document.querySelector("#informe-texto").textContent = informe.mensaje;
+      document.querySelector("#tx-total").textContent = informe.totalRegistros;
+      document.querySelector("#tx-validas").textContent = informe.transaccionesValidas;
+      document.querySelector("#tx-monto").textContent = dinero(informe.montoTotal);
+
+      const eventos = await llamar("/api/eventos");
+      const lista = document.querySelector("#eventos");
+      lista.innerHTML = "";
+      eventos.forEach((evento) => {
+        const item = document.createElement("li");
+        item.textContent = evento.tipoEvento + " — " + (evento.detalle || "") +
+          (evento.monto != null ? " · monto " + dinero(evento.monto) : "");
+        lista.appendChild(item);
+      });
+    }
+
+    document.querySelector("#entrar").addEventListener("click", async () => {
+      const body = new URLSearchParams({
+        grant_type: "client_credentials",
+        scope: "accounts.read transactions.read transactions.write events.read"
+      });
+      const response = await fetch("/oauth/token", {
+        method: "POST",
+        headers: {
+          Authorization: "Basic " + btoa("bank-client:bank-secret"),
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body
+      });
+      const data = await response.json();
+      mostrar(data);
+      token = data.access_token || "";
+      estado.textContent = token ? "Token vigente" : "No se obtuvo token";
+      estado.className = "pill " + (token ? "ok" : "warn");
+      if (token) await cargar();
+    });
+
+    document.querySelector("#cargar").addEventListener("click", () => cargar().catch((error) => {
+      raw.textContent = error.message;
+    }));
+
+    document.querySelector("#crear").addEventListener("click", async () => {
+      const creada = await llamar("/api/transacciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fecha: document.querySelector("#fecha").value,
+          monto: Number(document.querySelector("#monto").value),
+          tipo: document.querySelector("#tipo").value
+        })
+      });
+      document.querySelector("#alta").textContent = creada.eventoPublicado
+        ? "Transacción " + creada.transaccion.id + " publicada en Kafka."
+        : "La transacción se guardó, pero Kafka no confirmó el evento.";
+      await cargar();
+    });
+  </script>
+</body>
+</html>

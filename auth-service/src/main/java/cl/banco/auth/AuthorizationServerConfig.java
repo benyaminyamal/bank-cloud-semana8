@@ -76,11 +76,17 @@ public class AuthorizationServerConfig {
                 .build();
 
         RegisteredClient apiClient = client("bank-client", "bank-secret", tokens,
-                "accounts.read", "transactions.read", "transactions.write", "events.read");
+                "accounts.read", "accounts.write", "transactions.read", "transactions.write",
+                "events.read", "customers.read", "payments.read", "payments.write", "batch.run");
         RegisteredClient internalClient = client("transactions-internal", "internal-secret", tokens,
                 "accounts.read");
+        RegisteredClient bffInternal = client("bff-internal", "bff-internal-secret", tokens,
+                "accounts.read", "customers.read", "payments.read", "payments.write");
+        RegisteredClient web = client("web-client", "web-secret", tokens, "bff.web");
+        RegisteredClient mobile = client("mobile-client", "mobile-secret", tokens, "bff.mobile");
+        RegisteredClient atm = client("atm-client", "atm-secret", tokens, "bff.atm");
 
-        return new InMemoryRegisteredClientRepository(apiClient, internalClient);
+        return new InMemoryRegisteredClientRepository(apiClient, internalClient, bffInternal, web, mobile, atm);
     }
 
     @Bean

@@ -25,6 +25,13 @@
         <module>accounts-service</module>
         <module>transactions-service</module>
         <module>notification-service</module>
+        <module>customers-service</module>
+        <module>payments-service</module>
+        <module>batch-service</module>
+        <module>config-server</module>
+        <module>bff-web</module>
+        <module>bff-mobile</module>
+        <module>bff-atm</module>
         <module>gateway-service</module>
     </modules>
 
